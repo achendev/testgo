@@ -1,0 +1,22 @@
+docker build deploy:
+  stage: deploy
+  script:
+  - mkdir ~/build/${CI_COMMIT_SHORT_SHA}
+  - git clone https://github.com/achendev/testgo.git ~/build/${CI_COMMIT_SHORT_SHA}
+  - cd ~/build/${CI_COMMIT_SHORT_SHA} && git checkout ${CI_COMMIT_SHORT_SHA}
+  - docker image build -t registry.example.com/testgo:${CI_COMMIT_SHORT_SHA}
+  - docker push registry.example.com/testgo:${CI_COMMIT_SHORT_SHA}
+  - helm upgrade testgo ~/helm/dockerbuild -f ~/helm/values.yaml 
+    --set=git.commit=${CI_COMMIT_SHORT_SHA} 
+    --set=image.ready=registry.example.com/testgo:${CI_COMMIT_SHORT_SHA}
+  when: manual
+  tags:
+    - dev
+
+helm build deploy:
+  stage: deploy
+  script:
+  - helm upgrade testgo ~/helm/helmbuild -f ~/helm/values.yaml --set=git.commit=${CI_COMMIT_SHORT_SHA}
+  when: manual
+  tags:
+    - dev

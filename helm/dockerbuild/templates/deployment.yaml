@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-4"
+  creationTimestamp: null
+  labels:
+    {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+  name: {{ .Values.app.name }}-{{ .Values.namespace }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  template:
+    metadata:
+      annotations:
+      creationTimestamp: null
+      labels:
+        {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+    spec:
+      containers:
+        - name: {{ .Values.app.name }}-{{ .Values.namespace }}
+          command: 
+          - /opt/test/viewer
+          env:
+          image: {{ .Values.image.ready }}
+          name: {{ .Values.app.name }}-{{ .Values.namespace }}
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          resources: {}
+          workingDir: {{ .Values.dir.work }}
+      restartPolicy: Always
+status: {}

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+  name: {{ .Values.app.name }}-{{ .Values.namespace }}
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+    - name: {{ .Values.app.name }}-port
+      port: {{ .Values.app.port }}
+      targetPort: {{ .Values.app.port }}
+  selector:
+    {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+status:
+  loadBalancer: {}

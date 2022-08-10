@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-4"
+  creationTimestamp: null
+  labels:
+    {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+  name: {{ .Values.app.name }}-{{ .Values.namespace }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  template:
+    metadata:
+      annotations:
+      creationTimestamp: null
+      labels:
+        {{ .Values.app.name }}.label: {{ .Values.app.name }}-{{ .Values.namespace }}
+    spec:
+      containers:
+        - name: {{ .Values.app.name }}-{{ .Values.namespace }}
+          command: 
+          - ./viewer
+          env:
+          image: {{ .Values.image.work }}
+          name: {{ .Values.app.name }}-{{ .Values.namespace }}
+          ports:
+            - containerPort: {{ .Values.app.port }}
+          resources: {}
+          workingDir: {{ .Values.dir.work }}
+          volumeMounts:
+            - mountPath: {{ .Values.dir.work }}
+              name: build-volume
+      initContainers:
+        - name: init-clone-repo
+          command: 
+          - sh
+          - -c
+          - git clone https://${GIT_NAME}:${GIT_TOKEN}@{{ .Values.repo }} ./
+            && git checkout {{ .Values.git.commit | default "" }}
+          workingDir: {{ .Values.dir.code }}
+          env:
+          - name: GIT_NAME
+            valueFrom:
+              secretKeyRef:
+                key: gittokenname
+                name: {{ .Values.app.name }}-secrets-{{ .Values.namespace }}
+          - name: GIT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: gittokenvalue
+                name: {{ .Values.app.name }}-secrets-{{ .Values.namespace }}
+          image: {{ .Values.image.git }}
+          imagePullPolicy: Always
+          resources: {}
+          volumeMounts:
+            - mountPath: {{ .Values.dir.code }}
+              name: code-volume
+        - name: prepare-node
+          command:
+          - sh
+          - -c
+          - for FILENAME in $(find . -maxdepth 1 -name '*.go'); do
+            go build $FILENAME
+            && mv ${FILENAME/.go/} {{ .Values.dir.work }}/
+            || exit 1 ; done
+          image: {{ .Values.image.build }}
+          resources: {}
+          workingDir: {{ .Values.dir.code }}
+          volumeMounts:
+            - mountPath: {{ .Values.dir.work }}
+              name: build-volume
+            - mountPath: {{ .Values.dir.code }}
+              name: code-volume
+      volumes:
+        - name: code-volume
+          emptyDir: {}
+        - name: build-volume
+          emptyDir: {}
+      restartPolicy: Always
+status: {}

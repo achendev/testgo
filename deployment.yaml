@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    testgo.label: testgo
+  name: testgo
+  namespace: testgo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      testgo.label: testgo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        testgo.label: testgo
+    spec:
+      initContainers:
+        - name: init-clone-repo
+          command:
+          - sh
+          - -c
+          - git clone https://github.com/achendev/testgo ./
+          workingDir: /code
+          image: alpine/git
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /code
+              name: code-volume
+        - name: prepare-node
+          command:
+          - sh
+          - -c
+          - for FILENAME in $(find . -maxdepth 1 -name '*.go'); do
+            go build $FILENAME &&
+            mv ${FILENAME/.go/} /opt/test/ ||
+            exit 1 ; done
+          image: golang:alpine
+          workingDir: /code
+          volumeMounts:
+            - mountPath: /opt/test
+              name: build-volume
+            - mountPath: /code
+              name: code-volume
+      containers:
+        - name: testgo
+          command:
+          - /opt/test/viewer
+          image: alpine
+          name: testgo
+          ports:
+            - containerPort: 80
+          resources: {}
+          workingDir: /opt/test
+          volumeMounts:
+            - mountPath: /opt/test
+              name: build-volume
+      volumes:
+        - name: code-volume
+          emptyDir: {}
+        - name: build-volume
+          emptyDir: {}
+      restartPolicy: Always
+status: {}

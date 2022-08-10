@@ -1,0 +1,26 @@
+domain: testgo.example.com
+
+namespace: testgo
+
+replicas: 1
+
+repo: https://github.com/achendev/testgo.git
+
+image:
+  ready: http://registry.example.com/testgo:latest
+  git: alpine/git
+  build: golang:alpine
+  work: alpine
+
+app:
+  name: testgo
+  port: 80
+
+dir:
+  code: /code
+  work: /opt/test
+
+git:
+  token:
+    name: testgo
+    value: TestGoToken
